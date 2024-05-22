@@ -1,0 +1,128 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using System;
+using System.Reflection;
+using System.Reflection.Emit;
+
+public class ProgrammingUI : MonoBehaviour
+{
+    // Start is called before the first frame update
+    public float radius = 20f;
+    public Shader imageShader;
+    private Texture2D generatedTexture; // Dynamically generated texture
+    private Material material;
+    private ComputeBuffer computeBuffer;
+    private int res = 0;
+    void Start()
+    {
+        material = new Material(imageShader);
+        generatedTexture = new Texture2D(Screen.width, Screen.height);
+        float[] floatArray = { 1.0f, 2.0f, 3.0f, 4.0f };
+
+        // Create the compute buffer with the length of the array and size of a float
+        computeBuffer = new ComputeBuffer(floatArray.Length, sizeof(float));
+        computeBuffer.SetData(floatArray);
+
+        // Pass the compute buffer to the shader
+        material.SetBuffer("floatArrayBuffer", computeBuffer);
+        //-------Assembly-------
+        AssemblyName assemblyName = new AssemblyName("DynamicAssembly");
+        AssemblyBuilder assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
+        ModuleBuilder moduleBuilder = assemblyBuilder.DefineDynamicModule("DynamicModule");
+        // Define a dynamic type
+        TypeBuilder typeBuilder = moduleBuilder.DefineType("DynamicType", TypeAttributes.Public);
+
+        // Define a dynamic method that returns an integer
+        MethodBuilder methodBuilder = typeBuilder.DefineMethod("Return42", MethodAttributes.Public | MethodAttributes.Static, typeof(int), Type.EmptyTypes);
+        // Get an ILGenerator and emit IL code
+        ILGenerator ilGenerator = methodBuilder.GetILGenerator();
+        ilGenerator.Emit(OpCodes.Ldc_I4, 42);  // Load constant 42 onto the evaluation stack
+        ilGenerator.Emit(OpCodes.Ret);         // Return the value on the evaluation stack
+
+        // Create the type and get the method
+        Type dynamicType = typeBuilder.CreateType();
+        MethodInfo dynamicMethod = dynamicType.GetMethod("Return42");
+
+        // Invoke the dynamic method
+        int result = (int)dynamicMethod.Invoke(null, null);
+
+        // Print the result
+        Debug.Log("Result: " + result);  // Output should be 42
+    }
+
+    // Update is called once per frame
+    void Update(){
+        float timeSinceSceneLoad = Time.timeSinceLevelLoad;
+        this.material.SetFloat("_TimeSince", timeSinceSceneLoad);
+    }
+    void OnDestroy()
+    {
+        if (computeBuffer != null)
+            computeBuffer.Release();
+    }
+    private bool isDragging = false;
+    private Vector2 offset;
+    private Vector2 position = Vector2.zero;
+
+    void OnGUI()
+    {
+        Graphics.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), generatedTexture, material);
+        /*// Define the position and size of the draggable element
+        Rect draggableRect = new Rect(10+position.x, 10+position.y, 100, 50); // (x, y, width, height)
+
+        // Check if the left mouse button is pressed over the draggable element
+        if (Event.current.type == EventType.MouseDown && draggableRect.Contains(Event.current.mousePosition))
+        {
+            isDragging = true;
+            // Calculate the offset between the mouse position and the top-left corner of the draggable element
+            offset = Event.current.mousePosition - new Vector2(draggableRect.x, draggableRect.y);
+        }
+        // Check if the left mouse button is released
+        else if (Event.current.type == EventType.MouseUp)
+        {
+            isDragging = false;
+        }
+
+        // If dragging, update the position of the draggable element based on the mouse position
+        if (isDragging)
+        {
+            // Calculate the new position of the draggable element based on the mouse position and the offset
+            position.x = Event.current.mousePosition.x - 10 - offset.x;
+            position.y = Event.current.mousePosition.y - 10 - offset.y;
+        }
+
+        // Draw the draggable element
+        GUI.Box(draggableRect, "Drag Me");
+
+        //Rounded
+        Rect rect = new Rect(50, 50, 200, 100);
+
+        // Define the radius of the rounded corners
+        
+
+        // Draw circles at specific corners to create the appearance of rounded corners
+        DrawCircle(new Vector2(rect.x+radius, rect.y+radius), radius);
+        DrawCircle(new Vector2(rect.x + rect.width - radius, rect.y + radius), radius);
+        DrawCircle(new Vector2(rect.x + radius , rect.y + rect.height - radius), radius);
+        DrawCircle(new Vector2(rect.x + rect.width - radius, rect.y + rect.height - radius), radius);
+        //Draw Body
+        GUI.Box(new Rect(rect.x,rect.y+radius,rect.width,rect.height-2*radius), "");
+        GUI.Box(new Rect(rect.x +radius,rect.y,rect.width - 2*radius,rect.height), "");*/
+    }
+    void DrawCircle(Vector2 center, float radius)
+    {
+        // Draw a circle using a series of small line segments
+        int segments = 20;
+        for (int i = 0; i < segments; i++)
+        {
+            float angle = i * 2 * Mathf.PI / segments;
+            Vector2 startPoint = center + new Vector2(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius);
+            angle = (i + 1) * 2 * Mathf.PI / segments;
+            Vector2 endPoint = center + new Vector2(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius);
+            // Draw a small rectangle to simulate a line
+            GUI.DrawTexture(new Rect(startPoint.x, startPoint.y, 1f, 1f), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(endPoint.x, endPoint.y, 1f, 1f), Texture2D.whiteTexture);
+        }
+    }
+}

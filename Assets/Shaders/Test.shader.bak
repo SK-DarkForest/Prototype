@@ -1,0 +1,89 @@
+Shader "Unlit/Menu2"
+{
+    Properties
+    {
+        _MainTex ("Texture", 2D) = "white" {}
+        _TimeSince ("TimeSince", Float) = 0.0
+    }
+    SubShader
+    {
+        Tags { "RenderType"="Opaque" }
+        LOD 100
+
+        Pass
+        {
+            CGPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            // make fog work
+            #pragma multi_compile_fog
+
+            #include "UnityCG.cginc"
+
+            struct appdata
+            {
+                float4 vertex : POSITION;
+                float2 uv : TEXCOORD0;
+            };
+
+            struct v2f
+            {
+                float2 uv : TEXCOORD0;
+                UNITY_FOG_COORDS(1)
+                float4 vertex : SV_POSITION;
+            };
+
+            sampler2D _MainTex;
+            float4 _MainTex_ST;
+            float _TimeSince;
+
+            v2f vert (appdata v)
+            {
+                v2f o;
+                o.vertex = UnityObjectToClipPos(v.vertex);
+                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                UNITY_TRANSFER_FOG(o,o.vertex);
+                return o;
+            }
+
+            fixed3 palette( float t ) {
+                fixed3 a = fixed3(0.5, 0.5, 0.5);
+                fixed3 b = fixed3(0.5, 0.5, 0.5);
+                fixed3 c = fixed3(1.0, 1.0, 1.0);
+                fixed3 d = fixed3(0.263,0.416,0.557);
+
+                return a + b*cos( 6.28318*(c*t+d) );
+            }
+
+            fixed4 frag (v2f i) : SV_Target
+            {
+                float2 uv = ((i.uv * 2.0 - _ScreenParams.xy) / _ScreenParams.y)/8;
+                float2 uv0 = uv;
+                fixed3 finalColor = fixed3(0.0,0,0);
+                
+                for (float j = 0.0; j < 12.0; j++) {
+                    uv = frac(uv*2.) - 0.5;
+
+                    float d = length(uv) * exp(-length(uv0));
+                    if(j<10){
+                        continue;
+                    }
+                    fixed3 col = palette(length(uv0) + j*.4 + _TimeSince/10*.4);
+
+                    d = sin(d*5. + _TimeSince/10)/5.;
+                    d = abs(d);
+
+                    d = pow(0.01 / d, 5.);
+
+                    finalColor += col * d;
+                    finalColor.b =  finalColor.b+.05*sin(_TimeSince/10);
+                    finalColor.g =  finalColor.g+.05*sin(_TimeSince/10+120.);
+                    finalColor.r =  finalColor.r+.05*sin(_TimeSince/10+300.);
+                }
+                    
+                return fixed4(finalColor, 1.0);
+            }
+            ENDCG
+        }
+    }
+}

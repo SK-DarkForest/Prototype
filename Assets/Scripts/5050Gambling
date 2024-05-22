@@ -1,0 +1,14 @@
+Starting with 10 Gold
+50% -> +10 Gold
+Gambling with 20 Gold
+25% -> +10 Gold
+Gambling with 40 Gold
+12,5% -> +10 Gold
+Gambling with 80 Gold
+6,25% -> +10 Gold
+End:
+6,25% -> -150 Gold
+
+Wer der Wette:
+.5*10+.25*10+.125*10+.0625*10-.0625*150=5+2.5+1.25+.625-9.375=0
+lim = 0 (unendlich*1-unendlich²*0)
